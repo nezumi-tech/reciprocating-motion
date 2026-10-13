@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>往復運動の運動力学インフォグラフィックス | Reciprocating Motion Kinematics</title>
+  <meta name="description" content="変位振幅が同じ往復運動について、速度一定制御・加速度一定制御・加加速度一定（S字）制御の変位・速度・加速度・加加速度の挙動をリアルタイム同期アニメーションとグラフで徹底比較・可視化するインフォグラフィックス。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-dark">
+  <!-- 背景グリッド装飾 -->
+  <div class="bg-pattern" aria-hidden="true"></div>
+
+  <!-- ヘッダー -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="header-brand">
+        <div class="brand-badge">KINEMATICS INFOGRAPHICS</div>
+        <h1 class="brand-title">往復運動の運動力学と制御プロファイル比較</h1>
+        <p class="brand-subtitle">
+          同一振幅における「速度一定」「加速度一定」「加加速度一定（S字）」制御の比較・同期アニメーション
+        </p>
+      </div>
+
+      <div class="header-actions">
+        <!-- テーマ切り替え -->
+        <button id="themeToggleBtn" class="btn btn-icon" title="テーマ切り替え (ダーク/ライト)" aria-label="テーマ切り替え">
+          <svg class="icon sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+          <svg class="icon moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        </button>
+        <button id="guideModalBtn" class="btn btn-secondary">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          <span>用語・解説ガイド</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <!-- コントロールバー（再生・シーク・設定） -->
+    <section class="control-panel glass-card">
+      <div class="playback-controls">
+        <button id="playPauseBtn" class="btn btn-primary" title="再生 / 一時停止 (Space)">
+          <svg id="playIcon" class="icon" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          <svg id="pauseIcon" class="icon hidden" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+          <span id="playPauseText">再生</span>
+        </button>
+        <button id="resetBtn" class="btn btn-icon" title="先頭に戻す (R)">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
+        </button>
+
+        <!-- タイムラインシークバー -->
+        <div class="timeline-container">
+          <div class="time-label-group">
+            <span class="label-name">時間 (Time):</span>
+            <span id="currentTimeDisplay" class="value-text font-mono">0.00 s</span>
+            <span class="value-sub font-mono">/ <span id="totalPeriodDisplay">4.00</span> s (<span id="phaseDisplay">往路 0%</span>)</span>
+          </div>
+          <div class="slider-wrapper">
+            <input type="range" id="timeSeekBar" min="0" max="4" step="0.005" value="0" aria-label="時間シークバー">
+            <div id="seekBarProgress" class="progress-bar"></div>
+          </div>
+        </div>
+
+        <!-- 再生速度切り替え -->
+        <div class="speed-selector">
+          <span class="label-name">速度:</span>
+          <div class="btn-group" id="speedBtnGroup">
+            <button class="btn btn-chip" data-speed="0.25">0.25×</button>
+            <button class="btn btn-chip" data-speed="0.5">0.5×</button>
+            <button class="btn btn-chip active" data-speed="1">1.0×</button>
+            <button class="btn btn-chip" data-speed="2">2.0×</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- パラメータ調整バー -->
+      <div class="parameters-panel">
+        <div class="param-item">
+          <label for="strokeInput">ストローク振幅 $L$ [mm]:</label>
+          <input type="range" id="strokeInput" min="50" max="300" step="10" value="200">
+          <span id="strokeDisplay" class="param-val font-mono">200 mm</span>
+        </div>
+        <div class="param-item">
+          <label for="periodInput">周期 $T$ [s]:</label>
+          <input type="range" id="periodInput" min="1.0" max="8.0" step="0.2" value="4.0">
+          <span id="periodInputDisplay" class="param-val font-mono">4.0 s</span>
+        </div>
+        <div class="param-item toggle-item">
+          <label class="switch-label" for="showHarmonicToggle">
+            <input type="checkbox" id="showHarmonicToggle">
+            <span class="switch-slider"></span>
+            <span class="switch-text">単振動 (Harmonic) も比較表示</span>
+          </label>
+        </div>
+        <div class="param-item toggle-item">
+          <label class="switch-label" for="showVibrationToggle">
+            <input type="checkbox" id="showVibrationToggle" checked>
+            <span class="switch-slider"></span>
+            <span class="switch-text">ワーク残留振動 (Shock) 可視化</span>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- メインビジュアル：3つのアクチュエータ / キャリッジのリアルタイム運動比較 -->
+    <section class="simulation-section glass-card">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <h2 class="section-title">
+            <span class="icon-dot"></span>
+            リアルタイム往復運動シミュレーター
+          </h2>
+          <p class="section-desc">同一ストローク振幅（$0 \leftrightarrow L$）における運動の違いを同時に目視観察</p>
+        </div>
+        <div class="profile-toggles">
+          <span class="badge badge-const-v">速度一定</span>
+          <span class="badge badge-const-a">加速度一定</span>
+          <span class="badge badge-const-j">加加速度一定(S字)</span>
+          <span id="harmonicBadge" class="badge badge-harmonic hidden">単振動</span>
+        </div>
+      </div>
+
+      <!-- 3つの可視化トラック -->
+      <div class="motion-tracks-container" id="tracksContainer">
+        <!-- ① 速度一定 Track -->
+        <div class="track-row" id="trackConstV" data-type="constV">
+          <div class="track-info">
+            <div class="profile-tag tag-const-v">1. 速度一定 (Constant Velocity)</div>
+            <div class="metrics-grid font-mono">
+              <div class="metric-cell">
+                <span class="metric-lbl">変位 x</span>
+                <span class="metric-val" id="valPosV">0.0 mm</span>
+              </div>
+              <div class="metric-cell">
+                <span class="metric-lbl">速度 v</span>
+                <span class="metric-val" id="valVelV">0.0 mm/s</span>
+              </div>
+              <div class="metric-cell">
+                <span class="metric-lbl">加速度 a</span>
+                <span class="metric-val" id="valAccV">0.0 mm/s²</span>
+              </div>
+              <div class="metric-cell shock-cell">
+                <span class="metric-lbl">Jerk (衝撃)</span>
+                <span class="metric-val shock-badge" id="valJerkV">INF (無限大)</span>
+              </div>
+            </div>
+          </div>
+          <div class="track-rail-wrapper">
+            <div class="track-rail">
+              <div class="rail-scale">
+                <span>0 mm</span>
+                <span>L/2</span>
+                <span id="railMaxScaleV">L (200 mm)</span>
+              </div>
+              <!-- キャリッジ本体 -->
+              <div class="carriage-cart carriage-v" id="cartConstV">
+                <div class="cart-body">
+                  <div class="cart-label">V一定</div>
+                  <!-- 搭載ワーク（残留振動観察用） -->
+                  <div class="cart-payload payload-v" id="payloadV" title="搭載されたワークの揺れ">
+                    <div class="payload-mass"></div>
+                    <div class="payload-spring"></div>
+                  </div>
+                </div>
+                <!-- 衝撃ショック波エフェクト -->
+                <div class="shock-wave" id="shockV"></div>
+              </div>
+              <!-- ゴールガイド -->
+              <div class="stroke-bound left-bound"></div>
+              <div class="stroke-bound right-bound"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ② 加速度一定 Track -->
+        <div class="track-row" id="trackConstA" data-type="constA">
+          <div class="track-info">
+            <div class="profile-tag tag-const-a">2. 加速度一定 (Constant Acceleration)</div>
+            <div class="metrics-grid font-mono">
+              <div class="metric-cell">
+                <span class="metric-lbl">変位 x</span>
+                <span class="metric-val" id="valPosA">0.0 mm</span>
+              </div>
+              <div class="metric-cell">
+                <span class="metric-lbl">速度 v</span>
+                <span class="metric-val" id="valVelA">0.0 mm/s</span>
+              </div>
+              <div class="metric-cell">
+                <span class="metric-lbl">加速度 a</span>
+                <span class="metric-val" id="valAccA">0.0 mm/s²</span>
+              </div>
+              <div class="metric-cell shock-cell">
+                <span class="metric-lbl">Jerk (衝撃)</span>
+                <span class="metric-val shock-badge" id="valJerkA">スパイク</span>
+              </div>
+            </div>
+          </div>
+          <div class="track-rail-wrapper">
+            <div class="track-rail">
+              <div class="rail-scale">
+                <span>0 mm</span>
+                <span>L/2</span>
+                <span id="railMaxScaleA">L (200 mm)</span>
+              </div>
+              <div class="carriage-cart carriage-a" id="cartConstA">
+                <div class="cart-body">
+                  <div class="cart-label">A一定</div>
+                  <div class="cart-payload payload-a" id="payloadA">
+                    <div class="payload-mass"></div>
+                    <div class="payload-spring"></div>
+                  </div>
+                </div>
+                <div class="shock-wave" id="shockA"></div>
+              </div>
+              <div class="stroke-bound left-bound"></div>
+              <div class="stroke-bound right-bound"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ③ 加加速度一定 Track -->
+        <div class="track-row" id="trackConstJ" data-type="constJ">
+          <div class="track-info">
+            <div class="profile-tag tag-const-j">3. 加加速度一定 (Constant Jerk / S-Curve)</div>
+            <div class="metrics-grid font-mono">
+              <div class="metric-cell">
+                <span class="metric-lbl">変位 x</span>
+                <span class="metric-val" id="valPosJ">0.0 mm</span>
+              </div>
+              <div class="metric-cell">
+                <span class="metric-lbl">速度 v</span>
+                <span class="metric-val" id="valVelJ">0.0 mm/s</span>
+              </div>
+              <div class="metric-cell">
+                <span class="metric-lbl">加速度 a</span>
+                <span class="metric-val" id="valAccJ">0.0 mm/s²</span>
+              </div>
+              <div class="metric-cell shock-cell">
+                <span class="metric-lbl">Jerk (衝撃)</span>
+                <span class="metric-val smooth-badge" id="valJerkJ">滑らか(有限)</span>
+              </div>
+            </div>
+          </div>
+          <div class="track-rail-wrapper">
+            <div class="track-rail">
+              <div class="rail-scale">
+                <span>0 mm</span>
+                <span>L/2</span>
+                <span id="railMaxScaleJ">L (200 mm)</span>
+              </div>
+              <div class="carriage-cart carriage-j" id="cartConstJ">
+                <div class="cart-body">
+                  <div class="cart-label">J一定 (S字)</div>
+                  <div class="cart-payload payload-j" id="payloadJ">
+                    <div class="payload-mass"></div>
+                    <div class="payload-spring"></div>
+                  </div>
+                </div>
+                <div class="smooth-glow" id="glowJ"></div>
+              </div>
+              <div class="stroke-bound left-bound"></div>
+              <div class="stroke-bound right-bound"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ④ 単振動 Track (オプショナル) -->
+        <div class="track-row hidden" id="trackHarmonic" data-type="harmonic">
+          <div class="track-info">
+            <div class="profile-tag tag-harmonic">4. 単振動 (Simple Harmonic Motion)</div>
+            <div class="metrics-grid font-mono">
+              <div class="metric-cell">
+                <span class="metric-lbl">変位 x</span>
+                <span class="metric-val" id="valPosH">0.0 mm</span>
+              </div>
+              <div class="metric-cell">
+                <span class="metric-lbl">速度 v</span>
+                <span class="metric-val" id="valVelH">0.0 mm/s</span>
+              </div>
+              <div class="metric-cell">
+                <span class="metric-lbl">加速度 a</span>
+                <span class="metric-val" id="valAccH">0.0 mm/s²</span>
+              </div>
+              <div class="metric-cell shock-cell">
+                <span class="metric-lbl">Jerk (衝撃)</span>
+                <span class="metric-val smooth-badge" id="valJerkH">正弦波</span>
+              </div>
+            </div>
+          </div>
+          <div class="track-rail-wrapper">
+            <div class="track-rail">
+              <div class="rail-scale">
+                <span>0 mm</span>
+                <span>L/2</span>
+                <span id="railMaxScaleH">L (200 mm)</span>
+              </div>
+              <div class="carriage-cart carriage-h" id="cartHarmonic">
+                <div class="cart-body">
+                  <div class="cart-label">単振動</div>
+                  <div class="cart-payload payload-h" id="payloadH">
+                    <div class="payload-mass"></div>
+                    <div class="payload-spring"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="stroke-bound left-bound"></div>
+              <div class="stroke-bound right-bound"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4連動グラフセクション（変位・速度・加速度・加加速度） -->
+    <section class="charts-section glass-card">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <h2 class="section-title">
+            <span class="icon-dot green"></span>
+            時間変化グラフ ($x, v, a, j$ 同期波形プロファイル)
+          </h2>
+          <p class="section-desc">時間軸（横軸 $0 \sim T$）上で同一スケールで重ね合わせて違いを一目で分析</p>
+        </div>
+
+        <div class="chart-view-options">
+          <div class="legend-items">
+            <span class="legend-chip chip-v"><span class="chip-dot"></span>速度一定</span>
+            <span class="legend-chip chip-a"><span class="chip-dot"></span>加速度一定</span>
+            <span class="legend-chip chip-j"><span class="chip-dot"></span>加加速度一定(S字)</span>
+            <span class="legend-chip chip-h hidden" id="legendHarmonic"><span class="chip-dot"></span>単振動</span>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-sm btn-chip active" id="btnViewOverlay">重ね合わせ表示</button>
+            <button class="btn btn-sm btn-chip" id="btnViewSplit">方式別表示</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4つのグラフグリッド -->
+      <div class="charts-grid" id="chartsGrid">
+        <!-- 1. 変位 x(t) グラフ -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <div class="chart-card-title">
+              <span class="axis-symbol">x(t)</span>
+              <span class="axis-name">変位 (Displacement) [mm]</span>
+            </div>
+            <div class="current-value-tag font-mono" id="chartHoverValPos">t=0.00s</div>
+          </div>
+          <div class="canvas-container">
+            <canvas id="canvasPos" height="200"></canvas>
+            <div class="chart-cursor-line" id="cursorPos"></div>
+          </div>
+          <div class="chart-card-footer">
+            <span class="footer-note">速度一定: 三角波 (一次) | 加速度一定: 放物線 (二次) | S字: 三次・四次スプライン</span>
+          </div>
+        </div>
+
+        <!-- 2. 速度 v(t) グラフ -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <div class="chart-card-title">
+              <span class="axis-symbol">v(t)</span>
+              <span class="axis-name">速度 (Velocity) [mm/s]</span>
+            </div>
+            <div class="current-value-tag font-mono" id="chartHoverValVel">t=0.00s</div>
+          </div>
+          <div class="canvas-container">
+            <canvas id="canvasVel" height="200"></canvas>
+            <div class="chart-cursor-line" id="cursorVel"></div>
+          </div>
+          <div class="chart-card-footer">
+            <span class="footer-note">速度一定: 矩形波 (段差不連続) | 加速度一定: 三角波 | S字: 滑らかなS字曲線</span>
+          </div>
+        </div>
+
+        <!-- 3. 加速度 a(t) グラフ -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <div class="chart-card-title">
+              <span class="axis-symbol">a(t)</span>
+              <span class="axis-name">加速度 (Acceleration) [mm/s²]</span>
+            </div>
+            <div class="current-value-tag font-mono" id="chartHoverValAcc">t=0.00s</div>
+          </div>
+          <div class="canvas-container">
+            <canvas id="canvasAcc" height="200"></canvas>
+            <div class="chart-cursor-line" id="cursorAcc"></div>
+          </div>
+          <div class="chart-card-footer">
+            <span class="footer-note">速度一定: 反転時インパルス (無限大) | 加速度一定: 矩形波 | S字: 三角波/連続波形</span>
+          </div>
+        </div>
+
+        <!-- 4. 加加速度 j(t) グラフ -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <div class="chart-card-title">
+              <span class="axis-symbol">j(t)</span>
+              <span class="axis-name">加加速度 (Jerk: 衝撃変化率) [mm/s³]</span>
+            </div>
+            <div class="current-value-tag font-mono" id="chartHoverValJerk">t=0.00s</div>
+          </div>
+          <div class="canvas-container">
+            <canvas id="canvasJerk" height="200"></canvas>
+            <div class="chart-cursor-line" id="cursorJerk"></div>
+          </div>
+          <div class="chart-card-footer">
+            <span class="footer-note">加速度一定: 切り替え時に衝撃スパイク | S字: 区分一定 (有限有界で衝撃を遮断)</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- インフォグラフィックス解説＆比較マトリックス -->
+    <section class="infographic-section glass-card">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <h2 class="section-title">
+            <span class="icon-dot orange"></span>
+            運動特性インフォグラフィック比較表
+          </h2>
+          <p class="section-desc">工学・物理における理論限界と実機適用時の特徴まとめ</p>
+        </div>
+      </div>
+
+      <div class="comparison-table-wrapper">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>制御方式</th>
+              <th>変位 $x(t)$</th>
+              <th>最高速度 $v_{\max}$</th>
+              <th>最大加速度 $a_{\max}$</th>
+              <th>Jerk (衝撃) $j_{\max}$</th>
+              <th>メリット</th>
+              <th>デメリット・実機の課題</th>
+              <th>代表的な用途</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="row-v">
+              <td>
+                <div class="table-profile-cell">
+                  <span class="color-indicator bg-v"></span>
+                  <strong>速度一定</strong>
+                  <span class="sub-text">Constant Velocity</span>
+                </div>
+              </td>
+              <td>三角波<br><span class="badge-math">1次式</span></td>
+              <td><span class="val-highlight font-mono">1.0 × v₀</span><br><span class="sub-text">最も遅い</span></td>
+              <td><span class="val-alert font-mono">理論上 ∞</span><br><span class="sub-text">反転時インパルス</span></td>
+              <td><span class="val-alert font-mono">理論上 ∞</span><br><span class="sub-text">強烈な破壊的衝撃</span></td>
+              <td>移動中の速度が均一で予測が極めて容易</td>
+              <td>反転時に機構が破壊・脱調・スリップするため実機では純粋実現不可能</td>
+              <td>低速コンベア、スプレー塗布、計測器の定速スキャン</td>
+            </tr>
+            <tr class="row-a">
+              <td>
+                <div class="table-profile-cell">
+                  <span class="color-indicator bg-a"></span>
+                  <strong>加速度一定</strong>
+                  <span class="sub-text">Constant Acceleration</span>
+                </div>
+              </td>
+              <td>区分放物線<br><span class="badge-math">2次式</span></td>
+              <td><span class="val-highlight font-mono">2.0 × v₀</span><br><span class="sub-text">中程度</span></td>
+              <td><span class="val-highlight font-mono">一定値 (4L/τ²)</span><br><span class="sub-text">有界最小</span></td>
+              <td><span class="val-alert font-mono">切替時 ∞</span><br><span class="sub-text">インパルス状スパイク</span></td>
+              <td>モータの最大トルクを常に100%使い切るため最短時間移動が可能</td>
+              <td>加減速の切替時に衝撃（ジャーク）が発生し、残留振動・騒音の原因となる</td>
+              <td>油圧プレス、単純なカム機構、低剛性でない搬送機</td>
+            </tr>
+            <tr class="row-j">
+              <td>
+                <div class="table-profile-cell">
+                  <span class="color-indicator bg-j"></span>
+                  <strong>加加速度一定</strong>
+                  <span class="sub-text">Constant Jerk (S-Curve)</span>
+                </div>
+              </td>
+              <td>3次〜4次曲線<br><span class="badge-math">3〜4次式</span></td>
+              <td><span class="val-highlight font-mono">2.0 × v₀</span><br><span class="sub-text">中程度</span></td>
+              <td><span class="val-highlight font-mono">2.0 × a_const</span><br><span class="sub-text">ピークは2倍</span></td>
+              <td><span class="val-success font-mono">有限有界 (一定)</span><br><span class="sub-text">衝撃ゼロで滑らか</span></td>
+              <td>衝撃・残留振動が劇的に低減。機構寿命の延伸、高速位置決め精度向上</td>
+              <td>同じ周期で移動する場合、加速度のピーク値が2倍高くなる</td>
+              <td>超精密半導体マウンタ、エレベーター、工作機械CNC、産業用ロボット</td>
+            </tr>
+            <tr class="row-h">
+              <td>
+                <div class="table-profile-cell">
+                  <span class="color-indicator bg-h"></span>
+                  <strong>単振動</strong>
+                  <span class="sub-text">Simple Harmonic (参考)</span>
+                </div>
+              </td>
+              <td>正弦波<br><span class="badge-math">$\cos / \sin$</span></td>
+              <td><span class="val-highlight font-mono">1.57 × v₀</span><br><span class="sub-text">($\pi/2 \approx 1.57$)</span></td>
+              <td><span class="val-highlight font-mono">2.47 × a_const</span><br><span class="sub-text">($\pi^2/4 \approx 2.47$)</span></td>
+              <td><span class="val-success font-mono">有限 (連続正弦波)</span><br><span class="sub-text">無限階微分可能</span></td>
+              <td>クランク・リンク等の純機械的回転機構から極めてシンプルに生成可能</td>
+              <td>周期制御が回転数に拘束され、任意の加減速プロファイル変更が困難</td>
+              <td>ピストンエンジン、振り子、スコッチヨーク機構、振動フィーダー</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- なぜ加加速度（Jerk）が最重要なのか？ 工学的メカニズム深掘り -->
+    <section class="deepdive-section glass-card">
+      <div class="deepdive-grid">
+        <div class="deepdive-card">
+          <div class="card-icon-badge">⚡</div>
+          <h3>なぜ速度一定は反転時に壊れるのか？</h3>
+          <p>
+            速度が正から負へと瞬間的に切り替わる瞬間、速度の変化率である加速度は <strong>無限大（デルタ関数 $\delta(t)$）</strong> となります。
+            ニュートンの運動方程式 $F = m \cdot a$ より、物体質量 $m$ に作用する慣性力も無限大の衝撃波（衝撃荷重）となり、実機ではカップリング破損やモータの即時脱調を引き起こします。
+          </p>
+        </div>
+
+        <div class="deepdive-card">
+          <div class="card-icon-badge">🎯</div>
+          <h3>なぜ加速度一定でも振動が起きるのか？</h3>
+          <p>
+            加速度が一定値から急激に $-A$ へ切り替わる瞬間、加速度の時間変化率である <strong>加加速度（Jerk）が無限大のインパルス</strong> になります。
+            機械の剛性は有限（バネ要素を持つ）であるため、力 $F$ の不連続ステップ変化によって固有振動が励起され、停止位置で「ピタッ」と止まれずグラグラ揺れる「残留振動」が発生します。
+          </p>
+        </div>
+
+        <div class="deepdive-card">
+          <div class="card-icon-badge">✨</div>
+          <h3>加加速度一定（S字制御）の圧倒的優位性</h3>
+          <p>
+            Jerkを有限一定値 $\pm J$ で制限すると、加速度は連続な台形または三角形状に滑らかに立ち上がります。
+            これにより力 $F(t)$ の変化速度が緩和され、機械の共振周波数成分への加振エネルギーが極小化されます。
+            エレベーターの乗り心地が滑らかなのも、半導体チップを微小な位置ズレなく超高速配置できるのも、このS字プロファイルのおかげです。
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 用語・解説モーダル -->
+  <div id="guideModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-content glass-card">
+      <div class="modal-header">
+        <h2 id="modalTitle">運動力学用語と数式ガイド</h2>
+        <button id="closeModalBtn" class="btn btn-icon" aria-label="閉じる">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="guide-item">
+          <h4>変位 $x(t)$ (Displacement) [mm]</h4>
+          <p>基準位置（原点 $0$）からの距離。往復運動ではストローク $0 \to L \to 0$ を繰り返します。</p>
+        </div>
+        <div class="guide-item">
+          <h4>速度 $v(t) = \frac{dx}{dt}$ (Velocity) [mm/s]</h4>
+          <p>変位の時間変化率。折り返し地点で $v=0$ となり、進行方向が変わります。</p>
+        </div>
+        <div class="guide-item">
+          <h4>加速度 $a(t) = \frac{dv}{dt} = \frac{d^2x}{dt^2}$ (Acceleration) [mm/s²]</h4>
+          <p>速度の時間変化率。ニュートンの運動の第2法則 $F = m a$ より、モータに必要なトルクやワークにかかる慣性力に直結します。</p>
+        </div>
+        <div class="guide-item">
+          <h4>加加速度 $j(t) = \frac{da}{dt} = \frac{d^3x}{dt^3}$ (Jerk / 躍度) [mm/s³]</h4>
+          <p>加速度の時間変化率。「ショック・衝撃度」を表します。エレベーターの不快感、工作機械のびびり振動、ロボットのたわみ振動を決定づける極めて重要な物理量です。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <p>Interactive Reciprocating Motion Kinematics Infographics &mdash; Engineered for visual learning</p>
+  </footer>
+
+  <script src="kinematics.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
